@@ -1,15 +1,15 @@
 import { Response } from "express";
 import cookieParser from "cookie-parser";
-import sequelize from "./database/db.js";
+import mongo from "mongoose";
 import express from "express";
 import authRouter from "./auth/auth_router.js";
 import "dotenv/config";
 
 const app = express();
 
-sequelize
-  .authenticate()
-  .then(() => console.log("Connection to database was successful"))
+mongo
+  .connect(process.env.MONGO_URL as string)
+  .then(() => console.log("Connection to mongo was successful"))
   .catch((err) => console.log(err));
 
 app.use(express.json());

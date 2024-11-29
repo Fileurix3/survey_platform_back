@@ -1,43 +1,21 @@
-import { DataTypes, Model } from "@sequelize/core";
-import sequelize from "../database/db.js";
+import mongoose, { Schema, Types } from "mongoose";
 
-interface UserAttributes {
-  id?: string;
+export interface IUserModel {
+  _id: Types.ObjectId;
   name: string;
   password: string;
 }
 
-export class UserModel extends Model<UserAttributes> implements UserAttributes {
-  public id?: string;
-  public name!: string;
-  public password!: string;
-
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
-}
-
-UserModel.init(
-  {
-    id: {
-      type: DataTypes.UUIDV4,
-      defaultValue: DataTypes.UUIDV4,
-      primaryKey: true,
-      unique: true,
-    },
-    name: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      unique: true,
-    },
-    password: {
-      type: DataTypes.STRING,
-      allowNull: false,
-    },
+const userSchema = new Schema<IUserModel>({
+  name: {
+    type: String,
+    required: true,
+    unique: true,
   },
-  {
-    sequelize,
-    modelName: "UserModel",
-    tableName: "users",
-    timestamps: true,
-  }
-);
+  password: {
+    type: String,
+    required: true,
+  },
+});
+
+export const UserModel = mongoose.model<IUserModel>("Users", userSchema);

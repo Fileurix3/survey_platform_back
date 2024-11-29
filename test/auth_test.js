@@ -79,10 +79,8 @@ describe("auth test", () => {
   });
 
   after(async () => {
-    await UserModel.destroy({
-      where: {
-        name: "testUser",
-      },
+    await UserModel.deleteMany({
+      name: "testUser",
     });
   });
 });

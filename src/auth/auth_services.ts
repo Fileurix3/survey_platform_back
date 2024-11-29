@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { CustomError, handlerError } from "../index.js";
-import { UserModel } from "../models/user_model.js";
+import { IUserModel, UserModel } from "../models/user_model.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
@@ -15,10 +15,8 @@ export class AuthServices {
         throw new CustomError("Password must be at least 6 characters long", 400);
       }
 
-      const existingName: UserModel[] = await UserModel.findAll({
-        where: {
-          name: name,
-        },
+      const existingName: IUserModel[] = await UserModel.find({
+        name: name,
       });
 
       if (existingName.length > 0) {
@@ -27,14 +25,14 @@ export class AuthServices {
 
       const hashPassword: string = await bcrypt.hash(password, 10);
 
-      const newUser: UserModel = await UserModel.create({
+      const newUser: IUserModel = await UserModel.create({
         name: name,
         password: hashPassword,
       });
 
       const token = jwt.sign(
         {
-          userId: newUser.id,
+          userId: newUser._id,
           userName: newUser.name,
         },
         process.env.JWT_SECRET as string,
@@ -67,10 +65,8 @@ export class AuthServices {
         throw new CustomError("You have not filled in all the fields", 400);
       }
 
-      const user: UserModel | null = await UserModel.findOne({
-        where: {
-          name: name,
-        },
+      const user: IUserModel | null = await UserModel.findOne({
+        name: name,
       });
 
       if (user == null) {
@@ -85,7 +81,7 @@ export class AuthServices {
 
       const token = jwt.sign(
         {
-          userId: user.id,
+          userId: user._id,
           userName: user.name,
         },
         process.env.JWT_SECRET as string,
