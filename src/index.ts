@@ -1,21 +1,29 @@
 import { Response } from "express";
 import cookieParser from "cookie-parser";
 import mongo from "mongoose";
+import redisClient from "./redis/redis.js";
 import express from "express";
 import authRouter from "./auth/auth_router.js";
+import surveysRouter from "./surveys/surveys_router.js";
 import "dotenv/config";
 
 const app = express();
 
 mongo
   .connect(process.env.MONGO_URL as string)
-  .then(() => console.log("Connection to mongo was successful"))
-  .catch((err) => console.log(err));
+  .then(() => console.log("Connection to Mongo was successful"))
+  .catch((err) => console.log(`Mongo error: ` + err));
+
+redisClient
+  .connect()
+  .then(() => console.log("Connected to Redis was successful"))
+  .catch((err) => console.log("Redis error: " + err));
 
 app.use(express.json());
 app.use(cookieParser(process.env.COOKIE_SECRET));
 
 app.use("/auth", authRouter);
+app.use("/survey", surveysRouter);
 
 export class CustomError extends Error {
   statusCode: number;

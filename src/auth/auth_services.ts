@@ -50,7 +50,6 @@ export class AuthServices {
       res.status(201).json({
         message: "User successfully registered",
         token: token,
-        user: newUser,
       });
     } catch (err: unknown) {
       handlerError(err, res);
@@ -97,8 +96,8 @@ export class AuthServices {
       });
 
       res.status(200).json({
-        token,
         message: "Login successful",
+        token,
       });
     } catch (err: unknown) {
       handlerError(err, res);

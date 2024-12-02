@@ -4,6 +4,7 @@ export interface IUserModel {
   _id: Types.ObjectId;
   name: string;
   password: string;
+  createdAt: Date;
 }
 
 const userSchema = new Schema<IUserModel>({
@@ -15,6 +16,10 @@ const userSchema = new Schema<IUserModel>({
   password: {
     type: String,
     required: true,
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now(),
   },
 });
 
