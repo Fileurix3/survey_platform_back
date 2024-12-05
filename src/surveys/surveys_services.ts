@@ -3,6 +3,7 @@ import { CustomError, handlerError } from "../index.js";
 import { ISurveyModel, SurveyModel } from "../models/survey_model.js";
 import redisClient from "../redis/redis.js";
 import jwt from "jsonwebtoken";
+import { Types } from "mongoose";
 
 export class SurveysServices {
   public async createSurvey(req: Request, res: Response): Promise<void> {
@@ -52,6 +53,38 @@ export class SurveysServices {
 
       res.status(200).json({
         survey,
+      });
+    } catch (err: unknown) {
+      handlerError(err, res);
+    }
+  }
+
+  public async deleteSurvey(req: Request, res: Response): Promise<void> {
+    const userToken = req.cookies.token;
+    const { surveyId } = req.body;
+
+    try {
+      if (!surveyId) {
+        throw new CustomError("You didn't specify surveyId", 400);
+      }
+
+      const survey: ISurveyModel | null = await SurveyModel.findById(surveyId);
+
+      if (survey == null) {
+        throw new CustomError("Survey not found", 404);
+      }
+
+      const tokenDecode = jwt.decode(userToken);
+      const userId = (tokenDecode as { userId: Types.ObjectId }).userId;
+
+      if (userId != survey.creatorId) {
+        throw new CustomError("you don't have enough rights", 403);
+      }
+
+      await SurveyModel.deleteOne({ _id: surveyId });
+
+      res.status(200).json({
+        message: "Survey was successfully delete",
       });
     } catch (err: unknown) {
       handlerError(err, res);
