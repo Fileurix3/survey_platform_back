@@ -58,16 +58,10 @@ export class SurveysServices {
     }
   }
 
-  public async getRandomSurvey(req: Request, res: Response): Promise<void> {
-    try {
-    } catch (err: unknown) {
-      handlerError(err, res);
-    }
-  }
-
   public async answerTheSurvey(req: Request, res: Response): Promise<void> {
     const { surveyId, answerChoice } = req.body;
-    let userId = req.cookies.userId;
+    const userToken = req.cookies.token;
+    const userIdcookie = req.cookies.userId;
 
     try {
       if (!surveyId) {
@@ -76,31 +70,49 @@ export class SurveysServices {
         throw new CustomError("Select an answerChoice", 400);
       }
 
-      if (userId) {
-        const redisKey = `answered:${userId}:surveyId:${surveyId}`;
+      const survey: ISurveyModel | null = await SurveyModel.findById(surveyId).lean();
+
+      if (survey == null) {
+        throw new CustomError("Survey not found", 404);
+      }
+
+      if (userToken) {
+        const tokenDecode = jwt.decode(userToken);
+        const userId: string = (tokenDecode as { userId: string }).userId;
+
+        if (survey.responsed.includes(userId)) {
+          throw new CustomError("You've already answered this survey", 403);
+        }
+
+        await SurveyModel.updateOne(
+          { _id: surveyId },
+          {
+            $push: { responsed: userId },
+          }
+        );
+      }
+
+      if (userIdcookie) {
+        const redisKey = `answered:${userIdcookie}:surveyId:${surveyId}`;
         const isAnswered = await redisClient.get(redisKey);
 
         if (isAnswered) {
           throw new CustomError("You've already answered this survey", 403);
         }
         redisClient.setEx(redisKey, 7 * 24 * 60 * 60, "answered");
-      } else if (!userId) {
-        userId = crypto.randomUUID();
-        res.cookie("userId", userId, {
+      } else if (!userIdcookie) {
+        const newUserIdcookie = crypto.randomUUID();
+        res.cookie("userId", newUserIdcookie, {
           maxAge: 7 * 24 * 60 * 60 * 1000,
           httpOnly: true,
           sameSite: "lax",
         });
 
-        const redisKey = `answered:${userId}:surveyId:${surveyId}`;
+        const redisKey = `answered:${newUserIdcookie}:surveyId:${surveyId}`;
         redisClient.setEx(redisKey, 7 * 24 * 60 * 60, "answered");
       }
 
-      const survey: ISurveyModel | null = await SurveyModel.findById(surveyId).lean();
-
-      if (survey == null) {
-        throw new CustomError("Survey not found", 404);
-      } else if (!survey.questions[answerChoice]) {
+      if (!survey.questions[answerChoice]) {
         throw new CustomError(`Option number ${answerChoice} doesn't exist`, 400);
       }
 
