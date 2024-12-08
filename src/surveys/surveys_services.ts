@@ -1,9 +1,9 @@
-import { Request, Response } from "express";
 import { CustomError, handlerError } from "../index.js";
 import { ISurveyModel, SurveyModel } from "../models/survey_model.js";
+import { Request, Response } from "express";
+import { Types } from "mongoose";
 import redisClient from "../redis/redis.js";
 import jwt from "jsonwebtoken";
-import { Types } from "mongoose";
 
 export class SurveysServices {
   public async createSurvey(req: Request, res: Response): Promise<void> {
@@ -78,7 +78,7 @@ export class SurveysServices {
       const userId = (tokenDecode as { userId: Types.ObjectId }).userId;
 
       if (userId != survey.creatorId) {
-        throw new CustomError("you don't have enough rights", 403);
+        throw new CustomError("You don't have enough rights", 403);
       }
 
       await SurveyModel.deleteOne({ _id: surveyId });
@@ -91,10 +91,43 @@ export class SurveysServices {
     }
   }
 
+  public async getResultSurvey(req: Request, res: Response): Promise<void> {
+    const surveyId = req.params.surveyId;
+    const userToken = req.cookies.token;
+
+    try {
+      const survey: ISurveyModel | null = await SurveyModel.findById(surveyId).lean();
+
+      if (survey == null) {
+        throw new CustomError("Survey not found", 404);
+      }
+
+      const tokenDecode = jwt.decode(userToken);
+      const userId = (tokenDecode as { userId: Types.ObjectId }).userId;
+
+      if (userId != survey.creatorId) {
+        throw new CustomError("You don't have enough rights", 403);
+      }
+
+      const resultSurvey: Record<string, any> = {};
+
+      Object.keys(survey.questions).forEach((el) => {
+        resultSurvey[survey.questions[el]] = survey.answerCount[el];
+      });
+
+      res.status(200).json({
+        name: survey.name,
+        result: resultSurvey,
+      });
+    } catch (err: unknown) {
+      handlerError(err, res);
+    }
+  }
+
   public async answerTheSurvey(req: Request, res: Response): Promise<void> {
     const { surveyId, answerChoice } = req.body;
     const userToken = req.cookies.token;
-    const userIdcookie = req.cookies.userId;
+    const userIdCookie = req.cookies.userId;
 
     try {
       if (!surveyId) {
@@ -113,35 +146,35 @@ export class SurveysServices {
         const tokenDecode = jwt.decode(userToken);
         const userId: string = (tokenDecode as { userId: string }).userId;
 
-        if (survey.responsed.includes(userId)) {
+        if (survey.responded.includes(userId)) {
           throw new CustomError("You've already answered this survey", 403);
         }
 
         await SurveyModel.updateOne(
           { _id: surveyId },
           {
-            $push: { responsed: userId },
+            $push: { responded: userId },
           }
         );
       }
 
-      if (userIdcookie) {
-        const redisKey = `answered:${userIdcookie}:surveyId:${surveyId}`;
+      if (userIdCookie) {
+        const redisKey = `answered:${userIdCookie}:surveyId:${surveyId}`;
         const isAnswered = await redisClient.get(redisKey);
 
         if (isAnswered) {
           throw new CustomError("You've already answered this survey", 403);
         }
         redisClient.setEx(redisKey, 7 * 24 * 60 * 60, "answered");
-      } else if (!userIdcookie) {
-        const newUserIdcookie = crypto.randomUUID();
-        res.cookie("userId", newUserIdcookie, {
+      } else if (!userIdCookie) {
+        const newUserIdCookie = crypto.randomUUID();
+        res.cookie("userId", newUserIdCookie, {
           maxAge: 7 * 24 * 60 * 60 * 1000,
           httpOnly: true,
           sameSite: "lax",
         });
 
-        const redisKey = `answered:${newUserIdcookie}:surveyId:${surveyId}`;
+        const redisKey = `answered:${newUserIdCookie}:surveyId:${surveyId}`;
         redisClient.setEx(redisKey, 7 * 24 * 60 * 60, "answered");
       }
 

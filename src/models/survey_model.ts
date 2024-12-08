@@ -6,7 +6,7 @@ export interface ISurveyModel {
   name: string;
   questions: Record<string, string>;
   answerCount: Record<string, number>;
-  responsed: string[];
+  responded: string[];
   createdAt: Date;
 }
 
@@ -29,7 +29,7 @@ const surveySchema = new Schema<ISurveyModel>({
     of: Number,
     required: true,
   },
-  responsed: {
+  responded: {
     type: [String],
     default: [],
   },
