@@ -61,7 +61,7 @@ export class SurveysServices {
 
   public async deleteSurvey(req: Request, res: Response): Promise<void> {
     const userToken = req.cookies.token;
-    const { surveyId } = req.body;
+    const surveyId = req.params.surveyId;
 
     try {
       if (!surveyId) {
@@ -125,7 +125,8 @@ export class SurveysServices {
   }
 
   public async answerTheSurvey(req: Request, res: Response): Promise<void> {
-    const { surveyId, answerChoice } = req.body;
+    const { answerChoice } = req.body;
+    const surveyId = req.params.surveyId;
     const userToken = req.cookies.token;
     const userIdCookie = req.cookies.userId;
 
